@@ -10,9 +10,9 @@
 #   ]
 # }
 
-data "aws_iam_openid_connect_provider" "github" {
-  url = "https://token.actions.githubusercontent.com"
-}
+# data "aws_iam_openid_connect_provider" "github" {
+#   url = "https://token.actions.githubusercontent.com"
+# }
 
 # "Federated": "arn:aws:iam::012345678910:oidc-provider/token.actions.githubusercontent.com"
 resource "aws_iam_role" "github_oidc" {
@@ -23,7 +23,7 @@ resource "aws_iam_role" "github_oidc" {
     Statement = [{
       Effect = "Allow"
       Principal = {
-        Federated = data.aws_iam_openid_connect_provider.github.arn
+        Federated = "arn:aws:iam::242201314218:oidc-provider/token.actions.githubusercontent.com"
       }
       Action = "sts:AssumeRoleWithWebIdentity"
       Condition = {
