@@ -30,5 +30,5 @@ resource "aws_iam_role" "github_oidc" {
       }
     }]
   })
-  max_session_duration = 900
+  max_session_duration = 3600
 }
