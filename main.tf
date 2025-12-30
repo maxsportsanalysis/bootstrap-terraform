@@ -48,11 +48,5 @@ data "aws_iam_policy_document" "bootstrap_assume_role" {
         "arn:aws:iam::242201314218:user/bootstrap"
       ]
     }
-
-    condition {
-      test     = "Bool"
-      variable = "aws:MultiFactorAuthPresent"
-      values   = ["true"]
-    }
   }
 }
