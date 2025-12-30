@@ -1,0 +1,46 @@
+# bootstrap-github-oidc
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "iam:CreateOpenIDConnectProvider",
+            "Resource": "arn:aws:iam::242201314218:oidc-provider/token.actions.githubusercontent.com"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+              "iam:CreateRole",
+              "iam:CreateUser",
+              "iam:AttachUserPolicy"
+            ],
+            "Resource": "arn:aws:iam::242201314218:role/pki-prod-role-github-oidc-AssumeRoleWithAction"
+        }
+    ]
+}
+
+// AllowIAMPolicyCreation
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "iam:CreatePolicy",
+                "iam:CreatePolicyVersion",
+                "iam:DeletePolicyVersion",
+                "iam:GetPolicy",
+                "iam:GetPolicyVersion",
+                "iam:ListPolicies",
+                "iam:ListPolicyVersions",
+                "iam:CreateServiceLinkedRole"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "iam:AWSServiceName": "rolesanywhere.amazonaws.com"
+                }
+            }
+        }
+    ]
+}

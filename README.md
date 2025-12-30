@@ -46,3 +46,8 @@ resource "aws_iam_openid_connect_provider" "github" {
 resource "aws_s3_bucket" "terraform_state" {
   bucket = "org-terraform-state"
 }
+
+## Breakglass
+breakglass-role-trust-policy.json (BREAKGLASS_ROLE_TRUST_POLICY_PATH): Who is allowed to assume the breakglass role.
+breakglass-permissions-policy.json (BREAKGLASS_ROLE_PERMISSIONS_POLICY_PATH): What the breakglass role can do once assumed.
+breakglass-assume-role-policy.json (BREAKGLASS_USER_ASSUME_ROLE_POLICY_PATH): Allows the IAM user to call sts:AssumeRole.
