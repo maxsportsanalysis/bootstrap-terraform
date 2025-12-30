@@ -6,15 +6,14 @@ set -euo pipefail
 ############################################
 readonly AWS_ACCOUNT_ID="242201314218"
 readonly AWS_PROFILE="default"
+readonly GITHUB_OIDC_URL="https://token.actions.githubusercontent.com"
 
 BREAKGLASS_ROLE_NAME="BreakGlassRoleTrustPolicy"
 BREAKGLASS_ASSUME_POLICY_NAME="BreakGlassAssumeRolePolicy"
 BREAKGLASS_PERMISSIONS_POLICY_NAME="BreakGlassPermissionsPolicy"
-
 BREAKGLASS_ROLE_TRUST_POLICY_PATH="breakglass-role-trust-policy.json"
 BREAKGLASS_ASSUME_ROLE_POLICY_PATH="breakglass-assume-role-policy.json"
 BREAKGLASS_PERMISSIONS_POLICY_PATH="breakglass-permissions-policy.json"
-
 MFA_SERIAL="arn:aws:iam::${AWS_ACCOUNT_ID}:mfa/iphone-mcilek-aws-bootstrap"
 STS_DURATION=900
 
@@ -161,7 +160,20 @@ main() {
   export AWS_SESSION_TOKEN="${aws_session_token}"
 
   aws_username=$(aws sts get-caller-identity --query Arn --output text | awk -F'/' '{print $NF}')
-  log "Checking Assume Role: ${aws_username}"
+  log "Changed to User: ${aws_username}"
+
+  if aws iam list-open-id-connect-providers \
+    | jq -e '.OpenIDConnectProviderList[].Arn' \
+    | grep -q token.actions.githubusercontent.com; then
+    log "OIDC provider already exists, skipping creation"
+  else
+    log "Creating GitHub Actions OIDC provider"
+    aws iam create-open-id-connect-provider \
+      --url "${GITHUB_OIDC_URL}" \
+      --thumbprint-list "6938fd4d98bab03faadb97b34396831e3780aea1" \
+      --client-id-list "sts.amazonaws.com"
+  fi
+
 
   ############################################
   # CLEANUP HANDLER
