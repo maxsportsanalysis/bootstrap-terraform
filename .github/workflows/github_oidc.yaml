@@ -12,7 +12,7 @@ env:
   AWS_REGION: "us-east-2"
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 jobs:
@@ -42,7 +42,7 @@ jobs:
           terraform_version: 1.14.0
 
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -backend=false -lockfile=readonly=false -input=false -no-color -upgrade
 
       - name: Terraform Format Fix
         run: terraform fmt -recursive
