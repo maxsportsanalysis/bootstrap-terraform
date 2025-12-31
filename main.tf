@@ -1,44 +1,20 @@
-data "aws_iam_policy_document" "breakglass_role_trust_policy" {
-  statement {
-    effect = "Allow"
+resource "aws_s3_bucket" "terraform_state" {
+  bucket = "maxsportsanalysis-terraform-state-bucket"
 
-    actions = [
-      "sts:AssumeRole"
-    ]
+  versioning {
+    enabled = true
+  }
 
-    principals {
-      type        = "AWS"
-      identifiers = [
-        "arn:aws:iam::242201314218:user/bootstrap"
-      ]
-    }
-
-    condition {
-      test     = "Bool"
-      variable = "aws:MultiFactorAuthPresent"
-      values   = ["true"]
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        sse_algorithm = "AES256"
+      }
     }
   }
-}
 
-data "aws_iam_policy_document" "allow_assume_breakglass_role" {
-  statement {
-    effect = "Allow"
-
-    actions = [
-      "sts:AssumeRole",
-    ]
-
-    resources = [
-      "arn:aws:iam::242201314218:role/GithubActionsTerraformPermissions",
-    ]
+  tags = {
+    Name        = "Terraform State Bucket"
+    Environment = "Prod"
   }
-}
-
-resource "aws_iam_policy" "breakglass_assume_role_policy" {
-  name        = "GithubActionsTerraformPermissions"
-  description = "Allows sts:AssumeRole on GithubActionsTerraformPermissions"
-
-  policy = data.aws_iam_policy_document.allow_assume_breakglass_role.json
-
 }
