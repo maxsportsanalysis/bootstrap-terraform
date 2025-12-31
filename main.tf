@@ -30,14 +30,14 @@ data "aws_iam_policy_document" "allow_assume_breakglass_role" {
     ]
 
     resources = [
-      "arn:aws:iam::242201314218:role/BreakGlassRoleTrustPolicy",
+      "arn:aws:iam::242201314218:role/GithubActionsTerraformPermissions",
     ]
   }
 }
 
 resource "aws_iam_policy" "breakglass_assume_role_policy" {
-  name        = "BreakGlassAssumeRolePolicy"
-  description = "Allows sts:AssumeRole on BreakGlassRoleTrustPolicy"
+  name        = "GithubActionsTerraformPermissions"
+  description = "Allows sts:AssumeRole on GithubActionsTerraformPermissions"
 
   policy = data.aws_iam_policy_document.allow_assume_breakglass_role.json
 
