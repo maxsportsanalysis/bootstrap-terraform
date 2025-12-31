@@ -3,8 +3,19 @@
   "Statement": [
     {
       "Effect": "Allow",
-      "Action": "sts:AssumeRole",
-      "Resource": "arn:aws:iam::242201314218:role/GithubTrustPolicy"
+      "Action": [
+        "sts:AssumeRole",
+        "iam:CreatePolicy",
+        "iam:AttachRolePolicy",
+        "iam:CreateRole",
+        "iam:UpdateAssumeRolePolicy",
+        "iam:GetRole",
+        "iam:PassRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::242201314218:role/GithubTrustPolicy",
+        "arn:aws:iam::242201314218:policy/*"
+      ]
     }
   ]
 }
