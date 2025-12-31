@@ -5,6 +5,11 @@
       "Effect": "Allow",
       "Action": "sts:AssumeRole",
       "Resource": "arn:aws:iam::242201314218:role/GithubTrustPolicy"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:CreateRole",
+      "Resource": "arn:aws:sts::242201314218:assumed-role/GithubTrustPolicy/GitHubActions"
     }
   ]
 }
