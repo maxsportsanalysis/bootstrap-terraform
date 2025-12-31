@@ -10,7 +10,8 @@
         "iam:CreateRole",
         "iam:UpdateAssumeRolePolicy",
         "iam:GetRole",
-        "iam:PassRole"
+        "iam:PassRole",
+        "iam:PutRolePolicy"
       ],
       "Resource": [
         "arn:aws:iam::242201314218:role/GithubTrustPolicy",
