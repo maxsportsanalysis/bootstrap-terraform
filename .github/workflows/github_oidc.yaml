@@ -43,7 +43,7 @@ jobs:
           terraform_version: 1.14.0
 
       - name: Terraform Init
-        run: terraform init -backend=false -lockfile=readonly=false -input=false -no-color -upgrade
+        run: terraform init -backend=false -lockfile=readonly -input=false -no-color
 
       - name: Terraform Format Fix
         run: terraform fmt -recursive
