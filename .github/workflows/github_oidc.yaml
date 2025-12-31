@@ -71,6 +71,20 @@ jobs:
           ls -l -a
           ls -l .terraform
 
+      - name: Reinitialize with updated backend
+        run: |
+          terraform init \
+            -backend-config="./state.config" \
+            -input=false \
+            -no-color \
+            -upgrade \
+            -migrate-state
+      
+      - name: View Files After Backend Change
+        run: |
+          ls -l -a
+          ls -l .terraform
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v8
         with:
