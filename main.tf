@@ -39,5 +39,6 @@ resource "aws_iam_policy" "breakglass_assume_role_policy" {
   name        = "BreakGlassAssumeRolePolicy"
   description = "Allows sts:AssumeRole on BreakGlassRoleTrustPolicy"
 
-  policy = data.aws_iam_policy_document.breakglass_assume_role_policy.json
+  policy = data.aws_iam_policy_document.allow_assume_breakglass_role.json
+
 }
