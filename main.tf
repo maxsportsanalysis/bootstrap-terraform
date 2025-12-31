@@ -1,20 +1,27 @@
 resource "aws_s3_bucket" "terraform_state" {
   bucket = "maxsportsanalysis-terraform-state-bucket"
+}
 
-  versioning {
-    enabled = true
+resource "aws_s3_bucket_acl" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
+  acl    = "private"
+}
+
+resource "aws_s3_bucket_versioning" "terraform_state_versioning" {
+  bucket = aws_s3_bucket.terraform_state.id
+  versioning_configuration {
+    status = "Enabled"
   }
+}
 
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = "AES256"
-      }
+resource "aws_s3_bucket_object_lock_configuration" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
+  object_lock_enabled = "true"
+
+  rule {
+    default_retention {
+      mode = "GOVERNANCE"
+      days = 7
     }
-  }
-
-  tags = {
-    Name        = "Terraform State Bucket"
-    Environment = "Prod"
   }
 }
