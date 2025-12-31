@@ -35,7 +35,7 @@
             "arn:aws:iam::242201314218:policy/BreakGlassRoleTrustPolicy",
             "arn:aws:iam::242201314218:policy/BreakGlassPermissionsPolicy",
             "arn:aws:iam::242201314218:policy/BreakGlassAssumeRolePolicy",
-            "arn:aws:iam::242201314218:policy/GithubTrustPolicy"
+            "arn:aws:iam::242201314218:role/GithubRoleTrustPolicy"
           ]
         },
         {
@@ -50,7 +50,7 @@
           ],
           "Resource": [
             "arn:aws:iam::242201314218:role/BreakGlassRoleTrustPolicy",
-            "arn:aws:iam::242201314218:role/GithubTrustPolicy"
+            "arn:aws:iam::242201314218:role/GithubRoleTrustPolicy"
           ]
         }
     ]

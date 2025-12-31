@@ -4,9 +4,7 @@
     {
       "Effect": "Allow",
       "Action": "sts:AssumeRole",
-      "Resource": [
-        "arn:aws:iam::242201314218:role/BreakGlassRoleTrustPolicy"
-      ]
+      "Resource": "arn:aws:iam::242201314218:role/GithubTrustPolicy"
     }
   ]
 }

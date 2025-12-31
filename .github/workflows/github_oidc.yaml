@@ -27,7 +27,7 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v5
         with:
-          role-to-assume: arn:aws:iam::242201314218:role/BreakGlassRoleTrustPolicy
+          role-to-assume: arn:aws:iam::242201314218:role/GithubTrustPolicy
           # role-session-name: GitHub_to_AWS_via_FederatedOIDC
           aws-region: ${{ env.AWS_REGION }}
 
