@@ -65,6 +65,11 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
 
+      - name: View Files
+        run: |
+          ls -l -a
+          ls -l .terraform
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v8
         with:
