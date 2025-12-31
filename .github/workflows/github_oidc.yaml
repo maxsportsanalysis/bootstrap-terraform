@@ -43,28 +43,13 @@ jobs:
           terraform_version: 1.14.0
 
       - name: Terraform Init
-        run: terraform init -backend=false -lockfile=readonly -input=false -no-color
-
-      - name: Terraform Format Fix
-        run: terraform fmt -recursive
-
-      - name: Terraform Format Check
-        run: terraform fmt -check
-
-      - name: Terraform Validate
-        run: terraform validate
-
-      - name: Terraform Plan
-        run: terraform plan -input=false -var-file=envs/prod.tfvars -out=tfplan
-
-      - name: Upload Terraform plan
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfplan
-          path: tfplan
-
-      - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
+        run: |
+          terraform init -backend=false -lockfile=readonly -input=false -no-color
+          terraform fmt -recursive
+          terraform fmt -check
+          terraform validate
+          terraform plan -input=false -var-file=envs/prod.tfvars -out=tfplan
+          terraform apply -auto-approve tfplan
 
       - name: View Files
         run: |
@@ -74,7 +59,7 @@ jobs:
       - name: Reinitialize with updated backend
         run: |
           terraform init \
-            -backend-config="./state.config" \
+            -backend-config=./state.config \
             -input=false \
             -no-color \
             -upgrade \
