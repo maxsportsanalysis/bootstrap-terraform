@@ -1,6 +1,6 @@
 resource "aws_s3_bucket" "terraform_state" {
   bucket = "maxsportsanalysis-terraform-state-bucket"
-  depends_on = "aws_s3_bucket_versioning.terraform_state"
+  depends_on = aws_s3_bucket_versioning.terraform_state
 }
 
 resource "aws_s3_bucket_versioning" "terraform_state" {
