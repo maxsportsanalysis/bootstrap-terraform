@@ -1,4 +1,4 @@
-data "aws_iam_policy_document" "breakglass_trust_policy" {
+data "aws_iam_policy_document" "breakglass_role_trust_policy" {
   statement {
     effect = "Allow"
 
@@ -21,7 +21,23 @@ data "aws_iam_policy_document" "breakglass_trust_policy" {
   }
 }
 
-resource "aws_iam_role" "breakglass" {
-  name               = "BreakGlassRoleTrustPolicy"
-  assume_role_policy = data.aws_iam_policy_document.breakglass_trust_policy.json
+data "aws_iam_policy_document" "allow_assume_breakglass_role" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "sts:AssumeRole",
+    ]
+
+    resources = [
+      "arn:aws:iam::242201314218:role/BreakGlassRoleTrustPolicy",
+    ]
+  }
+}
+
+resource "aws_iam_policy" "breakglass_assume_role_policy" {
+  name        = "BreakGlassAssumeRolePolicy"
+  description = "Allows sts:AssumeRole on BreakGlassRoleTrustPolicy"
+
+  policy = data.aws_iam_policy_document.breakglass_assume_role_policy.json
 }
