@@ -1,0 +1,62 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "iam:AttachUserPolicy"
+            ],
+            "Resource": "arn:aws:iam::242201314218:user/bootstrap"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "iam:CreateUser",
+                "iam:DeleteUser",
+                "iam:ListUsers",
+                "iam:GetUser",
+                "iam:AttachUserPolicy",
+                "iam:DetachUserPolicy",
+                "iam:CreateAccessKey",
+                "iam:DeleteAccessKey",
+                "iam:ListAccessKeys"
+            ],
+            "Resource": "arn:aws:iam::242201314218:user/breakglass"
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "iam:CreatePolicy",
+            "iam:DeletePolicy",
+            "iam:GetPolicy",
+            "iam:ListPolicies",
+            "iam:PutRolePolicy"
+          ],
+          "Resource": [
+            "arn:aws:iam::242201314218:policy/BreakGlassRoleTrustPolicy",
+            "arn:aws:iam::242201314218:policy/BreakGlassPermissionsPolicy",
+            "arn:aws:iam::242201314218:policy/BreakGlassAssumeRolePolicy",
+            "arn:aws:iam::242201314218:policy/GithubTrustPolicy",
+            "arn:aws:iam::242201314218:policy/GithubAssumeRolePolicy"
+          ]
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "iam:CreateRole",
+            "iam:DeleteRole",
+            "iam:GetRole",
+            "iam:ListRoles",
+            "iam:UpdateAssumeRolePolicy",
+            "iam:AttachRolePolicy",
+            "iam:PutRolePolicy",
+            "iam:PassRole"
+          ],
+          "Resource": [
+            "arn:aws:iam::242201314218:role/BreakGlassRoleTrustPolicy",
+            "arn:aws:iam::242201314218:role/GithubTrustPolicy",
+            "arn:aws:iam::242201314218:policy/GithubAssumeRolePolicy"
+          ]
+        }
+    ]
+}
