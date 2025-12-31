@@ -23,7 +23,7 @@ data "aws_iam_policy_document" "github_oidc_trust" {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
       values   = [
-        "repo:maxsportsanalysis/bootstrap-terraform:*"
+        "repo:maxsportsanalysis/bootstrap-terraform:ref:refs/heads/main"
       ]
     }
   }
