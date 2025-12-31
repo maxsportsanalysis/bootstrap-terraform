@@ -3,6 +3,7 @@ terraform {
     bucket       = ""
     key          = ""
     region       = ""
+    profile      = ""
     encrypt      = true
     use_lockfile = true
   }
