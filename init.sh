@@ -138,7 +138,7 @@ main() {
 
   log "Attaching Role Policy (${BREAKGLASS_PERMISSIONS_POLICY_NAME}) to Role (${BREAKGLASS_ROLE_NAME})"
   aws iam attach-role-policy --role-name "${BREAKGLASS_ROLE_NAME}" --policy-arn "arn:aws:iam::${AWS_ACCOUNT_ID}:policy/${BREAKGLASS_PERMISSIONS_POLICY_NAME}"
-  aws iam attach-user-policy --user-name "${aws_username}" --policy-arn "arn:aws:iam::${AWS_ACCOUNT_ID}:policy/${BREAKGLASS_ASSUME_POLICY_NAME}"
+  aws iam attach-user-policy --user-name bootstrap --policy-arn "arn:aws:iam::${AWS_ACCOUNT_ID}:policy/${BREAKGLASS_ASSUME_POLICY_NAME}"
 
   ############################################
   # ASSUME BREAKGLASS ROLE
