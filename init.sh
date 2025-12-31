@@ -9,11 +9,13 @@ readonly AWS_PROFILE="default"
 readonly GITHUB_OIDC_URL="https://token.actions.githubusercontent.com"
 
 BREAKGLASS_ROLE_NAME="BreakGlassRoleTrustPolicy"
+GITHUB_ROLE_NAME="GithubRoleTrustPolicy"
 BREAKGLASS_ASSUME_POLICY_NAME="BreakGlassAssumeRolePolicy"
 BREAKGLASS_PERMISSIONS_POLICY_NAME="BreakGlassPermissionsPolicy"
 BREAKGLASS_ROLE_TRUST_POLICY_PATH="breakglass-role-trust-policy.json"
 BREAKGLASS_ASSUME_ROLE_POLICY_PATH="breakglass-assume-role-policy.json"
 BREAKGLASS_PERMISSIONS_POLICY_PATH="breakglass-permissions-policy.json"
+GITHUB_ROLE_TRUST_POLICY_PATH="github-oidc-provider-role.json"
 MFA_SERIAL="arn:aws:iam::${AWS_ACCOUNT_ID}:mfa/iphone-mcilek-aws-bootstrap"
 STS_DURATION=900
 
@@ -127,6 +129,12 @@ main() {
 
   log "Updating Trust Policy: ${BREAKGLASS_ROLE_NAME}"
   aws iam update-assume-role-policy --role-name "${BREAKGLASS_ROLE_NAME}" --policy-document "file://${BREAKGLASS_ROLE_TRUST_POLICY_PATH}"
+
+  aws iam get-role --role-name "${GITHUB_ROLE_NAME}" >/dev/null 2>&1 \
+    || aws iam create-role --role-name "${GITHUB_ROLE_NAME}" --assume-role-policy-document "file://${GITHUB_ROLE_TRUST_POLICY_PATH}"
+
+  log "Updating Trust Policy: ${GITHUB_ROLE_NAME}"
+  aws iam update-assume-role-policy --role-name "${GITHUB_ROLE_NAME}" --policy-document "file://${GITHUB_ROLE_TRUST_POLICY_PATH}"
 
   log "Ensuring Permissions Policy Exists: ${BREAKGLASS_PERMISSIONS_POLICY_NAME}"
   aws iam get-policy --policy-arn "arn:aws:iam::${AWS_ACCOUNT_ID}:policy/${BREAKGLASS_PERMISSIONS_POLICY_NAME}" >/dev/null 2>&1 \
