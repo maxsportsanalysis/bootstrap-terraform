@@ -25,7 +25,13 @@ jobs:
 
       - name: Generate lockfile
         run: |
-          terraform init -backend=false -lockfile=readonly=false -input=false -no-color -upgrade
+          terraform init \
+            -backend=false \
+            -lockfile=readonly=false \
+            -input=false \
+            -no-color \
+            -upgrade
+
           test -f .terraform.lock.hcl
 
       - name: View Files
