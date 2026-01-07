@@ -27,7 +27,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v5
         with:
           # role-to-assume: arn:aws:iam::242201314218:role/pki-prod-role-github-oidc
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GithubActionsTerraformRole
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GithubActionsTerraformBootstrap
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform
@@ -41,7 +41,7 @@ jobs:
           terraform fmt -recursive
           terraform fmt -check
           terraform validate
-          terraform plan -input=false -var-file=./envs/prod/prod.tfvars -out=tfplan
+          terraform plan -input=false -var-file=./prod.tfvars -out=tfplan
           terraform apply -auto-approve tfplan
       
       - name: View Terraform Init Files
@@ -50,51 +50,51 @@ jobs:
           ls -l .terraform
 
       # S3 Bucket Should Be Created
-      - name: Terraform Migrate State
-        run: |
-          terraform init -backend-config=./envs/prod/backend.tfbackend -input=false -no-color -upgrade -migrate-state
-          terraform fmt -recursive
-          terraform fmt -check
-          terraform validate
-          terraform plan -input=false -var-file=./envs/prod/prod.tfvars -out=tfplan
-          terraform apply -auto-approve tfplan
+      #- name: Terraform Migrate State
+      #  run: |
+      #    terraform init -backend-config=./envs/prod/backend.tfbackend -input=false -no-color -upgrade -migrate-state
+      #    terraform fmt -recursive
+      #    terraform fmt -check
+      #    terraform validate
+      #    terraform plan -input=false -var-file=./envs/prod/prod.tfvars -out=tfplan
+      #    terraform apply -auto-approve tfplan
 
-      - name: View Terraform Migrate State Files
-        run: |
-          ls -l -a
-          ls -l .terraform
+      #- name: View Terraform Migrate State Files
+      #  run: |
+      #    ls -l -a
+      #    ls -l .terraform
 
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v8
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          base: main
-          branch: lockfile/update
-          branch-suffix: timestamp
-          delete-branch: true
-          add-paths: |
-            .terraform.lock.hcl
-          commit-message: "chore(terraform): update .terraform.lock.hcl"
-          title: "chore(terraform): update lockfile"
-          body: |
-            ⚠️ MANUAL REVIEW REQUIRED ⚠️
-
-            This pull request was automatically created by CI to update
-            `.terraform.lock.hcl` after running `terraform init`.
-
-            What this PR does:
-            - Updates Terraform provider versions and checksums only
-            - Does NOT modify infrastructure resources or state
-            - Does NOT apply any Terraform changes
-
-            Merge requirements:
-            - Human review and explicit approval is required
-            - Merge using **Squash and merge** only
-            - Do NOT rebase or merge-commit
-
-            This workflow ensures deterministic provider versions across
-            all environments and prevents unreviewed dependency drift.
-
-            Please review the provider version diffs carefully before approving.
-          reviewers: |
-            maximcilek
+      #- name: Create Pull Request
+      #  uses: peter-evans/create-pull-request@v8
+      #  with:
+      #    token: ${{ secrets.GITHUB_TOKEN }}
+      #    base: main
+      #    branch: lockfile/update
+      #    branch-suffix: timestamp
+      #    delete-branch: true
+      #    add-paths: |
+      #      .terraform.lock.hcl
+      #    commit-message: "chore(terraform): update .terraform.lock.hcl"
+      #    title: "chore(terraform): update lockfile"
+      #    body: |
+      #      ⚠️ MANUAL REVIEW REQUIRED ⚠️
+#
+      #      This pull request was automatically created by CI to update
+      #      `.terraform.lock.hcl` after running `terraform init`.
+#
+      #      What this PR does:
+      #      - Updates Terraform provider versions and checksums only
+      #      - Does NOT modify infrastructure resources or state
+      #      - Does NOT apply any Terraform changes
+#
+      #      Merge requirements:
+      #      - Human review and explicit approval is required
+      #      - Merge using **Squash and merge** only
+      #      - Do NOT rebase or merge-commit
+#
+      #      This workflow ensures deterministic provider versions across
+      #      all environments and prevents unreviewed dependency drift.
+#
+      #      Please review the provider version diffs carefully before approving.
+      #    reviewers: |
+      #      maximcilek
