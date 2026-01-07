@@ -1,3 +1,0 @@
-bucket = var.terraform_state_bucket_name
-key = var.terraform_state_bucket_key_path
-region = var.aws_region
