@@ -1,7 +1,6 @@
 variable "terraform_bucket_name" {
   description = "AWS S3 bucket name storing the terraform state"
   type        = string
-  default     = true
 }
 
 variable "terraform_bucket_versioning_enabled" {

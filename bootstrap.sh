@@ -68,6 +68,7 @@ main() {
   local iam_user_name="bootstrap"
   local bootstrap_mfa_device_name="maxsportsanalysis-bootstrap-virtual-mfa"
   local bootstrap_role_name="Bootstrap"
+  local github_oidc_provider_role_name="GithubActionsTerraformBootstrap"
 
   local bootstrap_user_profile_name="${iam_user_name}-user"
 
@@ -120,7 +121,10 @@ EOF
           "Action": [
             "iam:PutRolePolicy"
           ],
-          "Resource": "arn:aws:iam::${aws_account_id}:role/${bootstrap_role_name}"
+          "Resource": [
+            "arn:aws:iam::${aws_account_id}:role/${bootstrap_role_name}",
+            "arn:aws:iam::${aws_account_id}:role/${github_oidc_provider_role_name}"
+          ]
       },
       {
           "Sid": "GetResourcePermissions",
@@ -176,11 +180,55 @@ EOF
     log "Creating GitHub OIDC Provider"
     aws iam create-open-id-connect-provider --url "https://token.actions.githubusercontent.com" --thumbprint-list "6938fd4d98bab03faadb97b34396831e3780aea1" --client-id-list "sts.amazonaws.com"
   fi
+
+  log "Creating Role: ${github_oidc_provider_role_name}"
+
+  aws iam create-role --role-name "${github_oidc_provider_role_name}" --description "GitHub Actions role for creating the s3 bucket for terraform backend" --assume-role-policy-document file://<(cat <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::${aws_account_id}:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+          "token.actions.githubusercontent.com:sub": [
+            "repo:maxsportsanalysis/bootstrap-terraform:ref:refs/heads/main"
+          ]
+        }
+      }
+    }
+  ]
+}
+EOF
+)
+
+  aws iam put-role-policy --role-name "${github_oidc_provider_role_name}" --policy-name "${github_oidc_provider_role_name}Permissions" --policy-document file://<(cat <<EOF
+{
+  "Version":"2012-10-17",		 	 	 
+  "Statement": [
+      {
+          "Effect": "Allow",
+          "Action": [
+            "s3:*",
+            "iam:PassRole",
+            "iam:CreateRole"
+          ],
+          "Resource": "*"
+      }
+  ]
+}  
+EOF
+)
+
   log "Completed Script..."
 }
 
 main "$@"
-
 
 
 # aws sts assume-role \

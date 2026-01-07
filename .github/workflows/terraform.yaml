@@ -1,19 +1,18 @@
-name: Terraform Lockfile Initialization
+name: Terraform
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 3 * * 0"
 
 env:
   AWS_REGION: "us-east-2"
 
 permissions:
+  id-token: write
   contents: write
   pull-requests: write
 
 jobs:
-  update-lockfile:
+  terraform:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,23 +20,46 @@ jobs:
         with:
           fetch-depth: 0
 
+      # This step configures AWS credentials using GitHub OIDC and automatically
+      # sets environment variables AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN
+      # and handles web identity token internally. So Terraform does NOT need to handle it.
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          # role-to-assume: arn:aws:iam::242201314218:role/pki-prod-role-github-oidc
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GithubActionsTerraformRole
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.14.0
 
-      - name: Generate lockfile
+      - name: Terraform Init
         run: |
           terraform init -backend=false -lockfile=readonly=false -input=false -no-color -upgrade
-          test -f .terraform.lock.hcl
+          terraform fmt -recursive
+          terraform fmt -check
+          terraform validate
+          terraform plan -input=false -var-file=./envs/prod/prod.tfvars -out=tfplan
+          terraform apply -auto-approve tfplan
+      
+      - name: View Terraform Init Files
+        run: |
+          ls -l -a
+          ls -l .terraform
 
-          # terraform fmt -recursive
-          # terraform fmt -check
-          # terraform validate
-          # terraform plan -input=false -var-file=./envs/prod/prod.tfvars -out=tfplan
-          # terraform apply -auto-approve tfplan
+      # S3 Bucket Should Be Created
+      - name: Terraform Migrate State
+        run: |
+          terraform init -backend-config=./envs/prod/backend.tfbackend -input=false -no-color -upgrade -migrate-state
+          terraform fmt -recursive
+          terraform fmt -check
+          terraform validate
+          terraform plan -input=false -var-file=./envs/prod/prod.tfvars -out=tfplan
+          terraform apply -auto-approve tfplan
 
-      - name: View Files
+      - name: View Terraform Migrate State Files
         run: |
           ls -l -a
           ls -l .terraform
