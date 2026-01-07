@@ -5,9 +5,6 @@ on:
   schedule:
     - cron: "0 3 * * 0"
 
-env:
-  AWS_REGION: "us-east-2"
-
 permissions:
   contents: write
   pull-requests: write
@@ -30,12 +27,6 @@ jobs:
         run: |
           terraform init -backend=false -lockfile=readonly=false -input=false -no-color -upgrade
           test -f .terraform.lock.hcl
-
-          # terraform fmt -recursive
-          # terraform fmt -check
-          # terraform validate
-          # terraform plan -input=false -var-file=./envs/prod/prod.tfvars -out=tfplan
-          # terraform apply -auto-approve tfplan
 
       - name: View Files
         run: |
