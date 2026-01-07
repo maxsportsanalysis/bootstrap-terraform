@@ -1,11 +1,11 @@
+// This role trusts any IAM principal from account 123456789012
+// to assume it if MFA is present.
 {
-  "Version": "2012-10-17",
+  "Version":"2012-10-17",
   "Statement": [
     {
       "Effect": "Allow",
-      "Principal": {
-        "AWS": "arn:aws:iam::242201314218:user/bootstrap"
-      },
+      "Principal": { "AWS": "arn:aws:iam::242201314218:user/bootstrap" },
       "Action": "sts:AssumeRole",
       "Condition": {
         "Bool": {

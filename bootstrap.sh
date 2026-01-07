@@ -4,23 +4,17 @@ set -euo pipefail
 ############################################
 # CONFIG
 ############################################
-readonly AWS_ACCOUNT_ID="242201314218"
-readonly AWS_PROFILE="default"
-readonly GITHUB_OIDC_URL="https://token.actions.githubusercontent.com"
 
-BREAKGLASS_ROLE_NAME="BreakGlassRoleTrustPolicy"
-BREAKGLASS_ASSUME_POLICY_NAME="BreakGlassAssumeRolePolicy"
-BREAKGLASS_PERMISSIONS_POLICY_NAME="BreakGlassPermissionsPolicy"
-GITHUB_TRUST_POLICY_NAME="GithubTrustPolicy"
-GITHUB_ASSUME_POLICY_NAME="GithubAssumeRolePolicy"
-BREAKGLASS_ROLE_TRUST_POLICY_PATH="breakglass-trust-policy.json"
-BREAKGLASS_ASSUME_ROLE_POLICY_PATH="breakglass-assume-role-policy.json"
-BREAKGLASS_PERMISSIONS_POLICY_PATH="breakglass-permissions-policy.json"
-GITHUB_TRUST_POLICY_PATH="github-oidc-provider-trust-policy.json"
-GITHUB_ASSUME_POLICY_PATH="github-odic-provider-assume-role.json"
-MFA_SERIAL="arn:aws:iam::${AWS_ACCOUNT_ID}:mfa/iphone-mcilek-aws-bootstrap"
-STS_DURATION=900
-
+log() {
+  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')] $*"
+}
+error() {
+  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: ERROR: $*" >&2
+}
+fatal() {
+  error "$*"
+  exit 1
+}
 
 usage() {
   cat << EOF
@@ -57,17 +51,10 @@ parse_args() {
     esac
   done
 
-  if [[ ${#POSITIONAL_ARGS[@]} -ne 1 ]]; then
+  if [[ ${#POSITIONAL_ARGS[@]} -ne 0 ]]; then
     error "Exactly two positional arguments required."
     usage
   fi
-}
-
-############################################
-# HELPERS
-############################################
-log() {
-  echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] $*"
 }
 
 require_file() {
@@ -75,126 +62,137 @@ require_file() {
 }
 
 main() {
+  unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_REGION AWS_DEFAULT_REGION
 
   parse_args "$@"
+  local iam_user_name="bootstrap"
+  local bootstrap_mfa_device_name="maxsportsanalysis-bootstrap-virtual-mfa"
+  local bootstrap_role_name="Bootstrap"
 
-  local aws_credentials_file_path="${POSITIONAL_ARGS[0]:-}"
+  local bootstrap_user_profile_name="${iam_user_name}-user"
 
+  local aws_account_id
+  aws_account_id=$(aws sts get-caller-identity --query Account --output text)
+  log "AWS Account ID: ${aws_account_id}"
 
-  ############################################
-  # VALIDATION
-  ############################################
-  require_file "${aws_credentials_file_path}"
-  require_file "$BREAKGLASS_ROLE_TRUST_POLICY_PATH"
-  require_file "$BREAKGLASS_ASSUME_ROLE_POLICY_PATH"
-  require_file "$BREAKGLASS_PERMISSIONS_POLICY_PATH"
+  aws iam get-user --user-name "${iam_user_name}" >/dev/null 2>&1 || aws iam create-user --user-name "${iam_user_name}"
+  aws iam create-virtual-mfa-device --virtual-mfa-device-name "${bootstrap_mfa_device_name}" --bootstrap-method Base32StringSeed --outfile "./${bootstrap_mfa_device_name}.txt"
+  sudo dnf install oathtool -y 
+  mapfile -t codes < <(oathtool --base32 --totp "$(tr -d '\n' < ./${bootstrap_mfa_device_name}.txt)" -w 1)
+  aws iam enable-mfa-device --user-name "${iam_user_name}" --serial-number "arn:aws:iam::${aws_account_id}:mfa/${bootstrap_mfa_device_name}" --authentication-code1 ${codes[0]} --authentication-code2 ${codes[1]}
+  sleep 10
+  aws iam create-role --role-name "${bootstrap_role_name}" --description "Bootstrap role for creating identity providers and IAM roles" --assume-role-policy-document file://<(cat <<EOF
+{
+  "Version":"2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": { "AWS": "arn:aws:iam::${aws_account_id}:user/${iam_user_name}" },
+      "Action": "sts:AssumeRole",
+      "Condition": {
+        "Bool": {
+          "aws:MultiFactorAuthPresent": "true"
+        }
+      }
+    }
+  ]
+}
+EOF
+)
 
-  read -r AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY < <(tail -n +2 "${aws_credentials_file_path}" | head -n1 | tr -d '\r' | tr ',' ' ')
-  echo "Access Key ID: $AWS_ACCESS_KEY_ID"
-  echo "Secret Access Key: $AWS_SECRET_ACCESS_KEY"  
-  export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
+  aws iam put-role-policy --role-name "${bootstrap_role_name}" --policy-name "${bootstrap_role_name}Permissions" --policy-document file://<(cat <<EOF
+{
+  "Version":"2012-10-17",		 	 	 
+  "Statement": [
+      {
+          "Sid": "CreateResourcePermissions",
+          "Effect": "Allow",
+          "Action": [
+            "iam:CreateOpenIDConnectProvider",
+            "iam:CreateRole",
+            "iam:CreatePolicy"
+          ],
+          "Resource": "*"
+      },
+      {
+          "Sid": "AttachResourcePermissions",
+          "Effect": "Allow",
+          "Action": [
+            "iam:PutRolePolicy"
+          ],
+          "Resource": "arn:aws:iam::${aws_account_id}:role/${bootstrap_role_name}"
+      },
+      {
+          "Sid": "GetResourcePermissions",
+          "Effect": "Allow",
+          "Action": [
+            "iam:GetOpenIDConnectProvider"
+          ],
+          "Resource": "arn:aws:iam::${aws_account_id}:oidc-provider/token.actions.githubusercontent.com"
+      },
+      {
+          "Sid": "DeleteResourcePermissions",
+          "Effect": "Allow",
+          "Action": [
+            "iam:DeleteOpenIDConnectProvider"
+          ],
+          "Resource": "arn:aws:iam::${aws_account_id}:oidc-provider/token.actions.githubusercontent.com"
+      }
+  ]
+}  
+EOF
+)
 
-  ############################################
-  # MFA → TEMP SESSION
-  ############################################
-  read -rp "Enter 6-digit MFA code: " MFA_CODE
+  aws iam put-user-policy --user-name "${iam_user_name}" --policy-name "Assume${bootstrap_role_name}Role" --policy-document file://<(cat <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": "sts:AssumeRole",
+    "Resource": "arn:aws:iam::${aws_account_id}:role/${bootstrap_role_name}"
+  }]
+}
+EOF
+)
+  aws configure set profile.bootstrap.role_arn "arn:aws:iam::${aws_account_id}:role/${bootstrap_role_name}"
+  aws configure set profile.bootstrap.source_profile "${bootstrap_user_profile_name}"
+  aws configure set profile.bootstrap.mfa_serial "arn:aws:iam::${aws_account_id}:mfa/${bootstrap_mfa_device_name}"
+  read access_key secret_key < <(aws iam create-access-key --user-name "${iam_user_name}" --query 'AccessKey.[AccessKeyId,SecretAccessKey]' --output text)
+  aws configure set aws_access_key_id "${access_key}" --profile "${bootstrap_user_profile_name}"
+  aws configure set aws_secret_access_key "${secret_key}" --profile "${bootstrap_user_profile_name}"
+  aws configure set region us-east-2 --profile "${bootstrap_user_profile_name}"
+  aws configure set output json --profile "${bootstrap_user_profile_name}"
+  sleep 10
+  creds_json=$(aws sts assume-role --profile "${bootstrap_user_profile_name}" --role-arn "arn:aws:iam::${aws_account_id}:role/${bootstrap_role_name}" --role-session-name "bootstrap-session-$(date +%s)" --serial-number "arn:aws:iam::${aws_account_id}:mfa/${bootstrap_mfa_device_name}" --token-code "$(oathtool --base32 --totp "$(cat ./${bootstrap_mfa_device_name}.txt)" | tr -d ' \n\r')" --query 'Credentials' --output json)
+  export AWS_ACCESS_KEY_ID=$(echo "${creds_json}" | jq -r '.AccessKeyId')
+  export AWS_SECRET_ACCESS_KEY=$(echo "${creds_json}" | jq -r '.SecretAccessKey')
+  export AWS_SESSION_TOKEN=$(echo "${creds_json}" | jq -r '.SessionToken')
+  sleep 5
+  aws sts get-caller-identity
 
-  SESSION_JSON=$(aws sts get-session-token --duration-seconds "$STS_DURATION" --serial-number "$MFA_SERIAL" --token-code "$MFA_CODE")
-
-  local aws_access_key_id
-  local aws_secret_access_key
-  local aws_session_token
-  local aws_session_token_ttl
-  aws_access_key_id=$(jq -r '.Credentials.AccessKeyId' <<< "$SESSION_JSON")
-  aws_secret_access_key=$(jq -r '.Credentials.SecretAccessKey' <<< "$SESSION_JSON")
-  aws_session_token=$(jq -r '.Credentials.SessionToken' <<< "$SESSION_JSON")
-  aws_session_token_ttl=$(jq -r '.Credentials.Expiration' <<< "$SESSION_JSON")
-  log "AWS Access Key ID: ${aws_access_key_id}"
-  log "AWS Secret Access Key: ${aws_secret_access_key}"
-  log "AWS Session Token: ${aws_session_token}"
-  log "AWS Session TTL: ${aws_session_token_ttl}"
-
-  export AWS_ACCESS_KEY_ID="${aws_access_key_id}"
-  export AWS_SECRET_ACCESS_KEY="${aws_secret_access_key}"
-  export AWS_SESSION_TOKEN="${aws_session_token}"
-
-  local aws_username
-  aws_username=$(aws sts get-caller-identity --query Arn --output text | awk -F'/' '{print $NF}')
-  log "Authenticated as user: ${aws_username}"
-
-  ############################################
-  # IAM SETUP (IDEMPOTENT)
-  ############################################
-  log "Ensuring Role Exists: ${BREAKGLASS_ROLE_NAME}"
-  aws iam get-role --role-name "${BREAKGLASS_ROLE_NAME}" >/dev/null 2>&1 \
-    || aws iam create-role --role-name "${BREAKGLASS_ROLE_NAME}" --assume-role-policy-document "file://${BREAKGLASS_ROLE_TRUST_POLICY_PATH}"
-
-  log "Updating Trust Policy: ${BREAKGLASS_ROLE_NAME}"
-  aws iam update-assume-role-policy --role-name "${BREAKGLASS_ROLE_NAME}" --policy-document "file://${BREAKGLASS_ROLE_TRUST_POLICY_PATH}"
-
-  aws iam get-role --role-name "${GITHUB_TRUST_POLICY_NAME}" >/dev/null 2>&1 \
-    || aws iam create-role --role-name "${GITHUB_TRUST_POLICY_NAME}" --assume-role-policy-document "file://${GITHUB_TRUST_POLICY_PATH}"
-
-  log "Updating Trust Policy: ${GITHUB_TRUST_POLICY_NAME}"
-  aws iam update-assume-role-policy --role-name "${GITHUB_TRUST_POLICY_NAME}" --policy-document "file://${GITHUB_TRUST_POLICY_PATH}"
-
-  log "Ensuring Permissions Policy Exists: ${BREAKGLASS_PERMISSIONS_POLICY_NAME}"
-  aws iam get-policy --policy-arn "arn:aws:iam::${AWS_ACCOUNT_ID}:policy/${BREAKGLASS_PERMISSIONS_POLICY_NAME}" >/dev/null 2>&1 \
-    || aws iam create-policy --policy-name "${BREAKGLASS_PERMISSIONS_POLICY_NAME}" --policy-document "file://${BREAKGLASS_PERMISSIONS_POLICY_PATH}"
-
-  log "Ensuring Assume-Role Policy Exists: ${BREAKGLASS_ASSUME_POLICY_NAME}"
-  aws iam get-policy --policy-arn "arn:aws:iam::${AWS_ACCOUNT_ID}:policy/${BREAKGLASS_ASSUME_POLICY_NAME}" >/dev/null 2>&1 \
-    || aws iam create-policy --policy-name "${BREAKGLASS_ASSUME_POLICY_NAME}" --policy-document "file://${BREAKGLASS_ASSUME_ROLE_POLICY_PATH}"
-
-  log "Ensuring Assume-Role Policy Exists: ${GITHUB_ASSUME_POLICY_NAME}"
-  aws iam get-policy --policy-arn "arn:aws:iam::${AWS_ACCOUNT_ID}:policy/${GITHUB_ASSUME_POLICY_NAME}" >/dev/null 2>&1 \
-    || aws iam create-policy --policy-name "${GITHUB_ASSUME_POLICY_NAME}" --policy-document "file://${GITHUB_ASSUME_POLICY_PATH}"
-
-  log "Attaching Role Policy (${BREAKGLASS_PERMISSIONS_POLICY_NAME}) to Role (${BREAKGLASS_ROLE_NAME})"
-  aws iam attach-role-policy --role-name "${BREAKGLASS_ROLE_NAME}" --policy-arn "arn:aws:iam::${AWS_ACCOUNT_ID}:policy/${BREAKGLASS_PERMISSIONS_POLICY_NAME}"
-  aws iam put-role-policy --role-name "${GITHUB_TRUST_POLICY_NAME}" --policy-name "${GITHUB_ASSUME_POLICY_NAME}" --policy-document "file://${GITHUB_ASSUME_POLICY_PATH}"
-
-  aws iam attach-user-policy --user-name bootstrap --policy-arn "arn:aws:iam::${AWS_ACCOUNT_ID}:policy/${BREAKGLASS_ASSUME_POLICY_NAME}"
-
-  ############################################
-  # ASSUME BREAKGLASS ROLE
-  ############################################
-
-  log "Assuming Role: ${BREAKGLASS_ROLE_NAME}"
-  ASSUME_JSON=$(aws sts assume-role --role-arn "arn:aws:iam::${AWS_ACCOUNT_ID}:role/${BREAKGLASS_ROLE_NAME}" --role-session-name "breakglass-$(date +%s)" --duration-seconds 900)
-  aws_access_key_id=$(jq -r '.Credentials.AccessKeyId' <<< "$ASSUME_JSON")
-  aws_secret_access_key=$(jq -r '.Credentials.SecretAccessKey' <<< "$ASSUME_JSON")
-  aws_session_token=$(jq -r '.Credentials.SessionToken' <<< "$ASSUME_JSON")
-  aws_session_token_ttl=$(jq -r '.Credentials.Expiration' <<< "$ASSUME_JSON")
-  log "AWS Access Key ID: ${aws_access_key_id}"
-  log "AWS Secret Access Key: ${aws_secret_access_key}"
-  log "AWS Session Token: ${aws_session_token}"
-  log "AWS Session TTL: ${aws_session_token_ttl}"
-
-  export AWS_ACCESS_KEY_ID="${aws_access_key_id}"
-  export AWS_SECRET_ACCESS_KEY="${aws_secret_access_key}"
-  export AWS_SESSION_TOKEN="${aws_session_token}"
-
-  aws_username=$(aws sts get-caller-identity --query Arn --output text | awk -F'/' '{print $NF}')
-  log "Changed to User: ${aws_username}"
-
-  if aws iam list-open-id-connect-providers \
-    | jq -e '.OpenIDConnectProviderList[].Arn' \
-    | grep -q token.actions.githubusercontent.com; then
-    log "OIDC provider already exists, skipping creation"
+  if aws iam get-open-id-connect-provider --open-id-connect-provider-arn "arn:aws:iam::${aws_account_id}:oidc-provider/token.actions.githubusercontent.com" >/dev/null 2>&1; then
+    log "OIDC provider already exists: arn:aws:iam::${aws_account_id}:oidc-provider/token.actions.githubusercontent.com"
   else
-    log "Creating GitHub Actions OIDC provider"
-    aws iam create-open-id-connect-provider \
-      --url "${GITHUB_OIDC_URL}" \
-      --thumbprint-list "6938fd4d98bab03faadb97b34396831e3780aea1" \
-      --client-id-list "sts.amazonaws.com"
+    log "Creating GitHub OIDC Provider"
+    aws iam create-open-id-connect-provider --url "https://token.actions.githubusercontent.com" --thumbprint-list "6938fd4d98bab03faadb97b34396831e3780aea1" --client-id-list "sts.amazonaws.com"
   fi
-
-
-  ############################################
-  # CLEANUP HANDLER
-  ############################################
-  trap 'unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN' EXIT
+  log "Completed Script..."
 }
 
 main "$@"
+
+
+
+# aws sts assume-role \
+# --role-session-name "bootstrap-$(date +%s)" \
+# --role-arn arn:aws:iam::242201314218:role/Bootstrap \
+# --output json | jq -r '.Credentials | "\(.AccessKeyId) \(.SecretAccessKey) \(.SessionToken)"' | \
+# while read access_key secret_key session_token; do
+#   aws configure set aws_access_key_id "${access_key}" --profile bootstrap-session
+#   log "Configure AWS Access Key ID"
+#   aws configure set aws_secret_access_key "${secret_key}" --profile bootstrap-session
+#   log "Configure AWS Secret Access Key"
+#   aws configure set aws_session_token "${session_token}" --profile bootstrap-session
+#   export AWS_SESSION_TOKEN="${session_token}"
+#   log "Configure AWS Access Key ID"
+# done

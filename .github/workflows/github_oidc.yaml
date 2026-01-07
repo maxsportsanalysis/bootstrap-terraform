@@ -31,11 +31,6 @@ jobs:
           # role-session-name: GitHub_to_AWS_via_FederatedOIDC
           aws-region: ${{ env.AWS_REGION }}
 
-      # Hello from AWS: WhoAmI
-      - name: Sts GetCallerIdentity
-        run: |
-          aws sts get-caller-identity
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -47,32 +42,10 @@ jobs:
           terraform fmt -recursive
           terraform fmt -check
           terraform validate
-          terraform plan -input=false -var-file=envs/prod.tfvars -out=tfplan
+          terraform plan -input=false -var-file=./envs/prod/prod.tfvars -out=tfplan
           terraform apply -auto-approve tfplan
-
+      
       - name: View Files
         run: |
           ls -l -a
           ls -l .terraform
-
-      - name: Debug State Step
-        run: terraform state list || echo "No state found"
-
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v8
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          base: main
-          branch: lockfile/update
-          branch-suffix: timestamp
-          delete-branch: true
-          add-paths: |
-            .terraform.lock.hcl
-          commit-message: "chore(terraform): update .terraform.lock.hcl"
-          title: "chore(terraform): update lockfile"
-          body: |
-            This PR updates the .terraform.lock.hcl file after running 'terraform init' in a container.
-
-            Please review carefully before merging. Changes affect provider dependency versions and should be minimal.
-          reviewers: |
-            maximcilek

@@ -1,13 +1,13 @@
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = "maxsportsanalysis-terraform-state-bucket"
-  object_lock_enabled = true
+  bucket = var.bucket_name
+  object_lock_enabled = var.object_lock_enabled ? true : null
 }
 
 resource "aws_s3_bucket_versioning" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
 
   versioning_configuration {
-    status = "Enabled"
+    status = var.versioning_enabled ? "Enabled" : "Suspended"
   }
 
   depends_on = [aws_s3_bucket.terraform_state]
@@ -18,8 +18,8 @@ resource "aws_s3_bucket_object_lock_configuration" "terraform_state" {
 
   rule {
     default_retention {
-      mode = "GOVERNANCE"
-      days = 7
+      mode = var.object_lock_mode
+      days = var.object_lock_retention_days
     }
   }
   depends_on = [aws_s3_bucket_versioning.terraform_state]
