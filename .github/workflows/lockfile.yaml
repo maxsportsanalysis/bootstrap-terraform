@@ -25,6 +25,7 @@ jobs:
 
       - name: Generate lockfile
         run: |
+          cd envs/prod
           terraform init \
             -backend=false \
             -lockfile=readonly=false \
