@@ -37,7 +37,7 @@ jobs:
 
       - name: Terraform Init
         run: |
-          terraform init -backend=false -lockfile=readonly=false -input=false -no-color -upgrade
+          terraform init -backend=false -lockfile=readonly=false -input=false -no-color -migrate-state
           terraform fmt -recursive
           terraform fmt -check
           terraform validate
